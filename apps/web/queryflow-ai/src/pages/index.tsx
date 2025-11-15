@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
   ArrowRight,
@@ -40,15 +40,10 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import type { Channel } from '@/shared/constants/channels'
 import type { Query } from '@/shared/types/query'
-import { classifyAndRoute, type ClassifyResponse } from '@/services/classify'
+import { classifyAndRoute } from '@/services/classify'
 import { buildClassifyRequest, type ClassifyRequest } from '@/shared/utils/composer'
 import { cn } from '@/lib/utils'
-
-const insights = [
-  { title: 'Prompt runs', metric: '2,481', delta: '+18% vs last week' },
-  { title: 'Datasets synced', metric: '36', delta: 'Up to date' },
-  { title: 'Latency (p95)', metric: '542ms', delta: '-73ms week over week' },
-]
+import { useRealtimeQueries } from '@/hooks/useRealtimeQueries'
 
 const workspaces = [
   { label: 'Flow Studio', icon: Bot },
@@ -63,7 +58,9 @@ const DEFAULT_USER_ID = 'user-001'
 
 const STATUS_VARIANTS: Record<string, string> = {
   pending: 'border-amber-500 text-amber-600',
-  routed: 'border-emerald-500 text-emerald-600',
+  new: 'border-slate-400 text-slate-600',
+  'in-progress': 'border-amber-500 text-amber-700',
+  resolved: 'border-emerald-500 text-emerald-600',
   error: 'border-rose-500 text-rose-600',
 }
 
@@ -81,28 +78,49 @@ const buildOptimisticQuery = (id: string, request: ClassifyRequest): Query => ({
   createdAt: new Date().toISOString(),
 })
 
-const hydrateQueryWithResponse = (query: Query, data: ClassifyResponse): Query => ({
-  ...query,
-  department: data.department,
-  priority: data.priority?.toString(),
-  sentiment: data.sentiment,
-  summary: data.summary,
-  tags: data.tags,
-  status: 'routed',
-  autoResponse: data.auto_response,
-})
-
 const formatRelativeTime = (value: string) =>
   formatDistanceToNow(new Date(value), { addSuffix: true })
+
+const priorityFromUrgency = (urgency?: number) => {
+  if (urgency === undefined) return 'Normal'
+  if (urgency >= 4) return 'High'
+  if (urgency >= 2) return 'Medium'
+  return 'Low'
+}
 
 export default function HomePage() {
   const { toast } = useToast()
   const [channel, setChannel] = useState<Channel>('whatsapp')
-  const [queries, setQueries] = useState<Query[]>([])
+  const [optimisticQueries, setOptimisticQueries] = useState<Query[]>([])
+  const { data: liveQueries = [] } = useRealtimeQueries(100)
 
-  const classifyMutation = useMutation<ClassifyResponse, Error, { request: ClassifyRequest }>({
+  const classifyMutation = useMutation<Query, Error, { request: ClassifyRequest }>({
     mutationFn: ({ request }) => classifyAndRoute(request),
   })
+
+  const combinedQueries = useMemo(
+    () => [...optimisticQueries, ...liveQueries],
+    [optimisticQueries, liveQueries],
+  )
+
+  const insights = useMemo(() => {
+    const total = liveQueries.length
+    const positive = liveQueries.filter((q) => q.sentiment === 'positive').length
+    const avgUrgency =
+      total === 0
+        ? '—'
+        : (liveQueries.reduce((sum, q) => sum + (q.urgency ?? 1), 0) / total).toFixed(1)
+
+    return [
+      { title: 'Total queries', metric: total.toString(), delta: 'Live demo data' },
+      {
+        title: 'Positive sentiment',
+        metric: total ? `${Math.round((positive / total) * 100)}%` : '0%',
+        delta: `${positive} cheering users`,
+      },
+      { title: 'Avg urgency', metric: avgUrgency, delta: '1 (low) → 5 (critical)' },
+    ]
+  }, [liveQueries])
 
   const handleComposerSubmit = (target: Channel, payload: unknown) => {
     const request = buildClassifyRequest(target, payload, DEFAULT_USER_ID)
@@ -118,33 +136,29 @@ export default function HomePage() {
 
     const tempId = createTempId()
     const optimisticQuery = buildOptimisticQuery(tempId, request)
-    setQueries((prev) => [optimisticQuery, ...prev])
+    setOptimisticQueries((prev) => [optimisticQuery, ...prev])
 
     classifyMutation.mutate(
       { request },
       {
         onSuccess: (data) => {
-          setQueries((prev) =>
-            prev.map((query) =>
-              query.id === tempId ? hydrateQueryWithResponse(query, data) : query,
-            ),
-          )
           toast({
             title: 'Query routed',
             description: `Department: ${data.department}`,
           })
         },
         onError: (error) => {
-          setQueries((prev) =>
-            prev.map((query) =>
-              query.id === tempId ? { ...query, status: 'error' } : query,
-            ),
+          setOptimisticQueries((prev) =>
+            prev.map((query) => (query.id === tempId ? { ...query, status: 'error' } : query)),
           )
           toast({
             title: 'Failed to route',
             description: error.message,
             variant: 'destructive',
           })
+        },
+        onSettled: () => {
+          setOptimisticQueries((prev) => prev.filter((query) => query.id !== tempId))
         },
       },
     )
@@ -290,14 +304,14 @@ export default function HomePage() {
               <CardDescription>Latest submissions and routing decisions.</CardDescription>
             </CardHeader>
             <CardContent>
-              {queries.length === 0 ? (
+              {combinedQueries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Compose a message to see it here.</p>
               ) : (
                 <div className="space-y-3">
-                  {queries.map((query) => (
+                  {combinedQueries.map((query) => (
                     <div key={query.id} className="rounded-xl border p-3 shadow-sm">
                       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
-                        <span className="font-semibold">{query.channel}</span>
+                        <span className="font-semibold capitalize">{query.channel}</span>
                         <Badge
                           variant="outline"
                           className={cn('capitalize', STATUS_VARIANTS[query.status] ?? '')}
@@ -312,7 +326,7 @@ export default function HomePage() {
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{formatRelativeTime(query.createdAt)}</span>
                         {query.department && <span>Dept: {query.department}</span>}
-                        {query.priority && <span>Priority: {query.priority}</span>}
+                        <span>Priority: {priorityFromUrgency(query.urgency)}</span>
                         {query.sentiment && <span>Sentiment: {query.sentiment}</span>}
                       </div>
                       {query.tags?.length ? (

@@ -1,4 +1,4 @@
-import { classifyMessage } from '../_shared/openai'
+import { generateDemoQuery, classifyMessage } from '../_shared/openai'
 import { adminSupabase } from '../_shared/supabase'
 import { corsHeaders, jsonResponse } from '../_shared/response'
 
@@ -16,30 +16,24 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    const payload = await req.json()
-
-    const requiredFields = ['userId', 'channel', 'message']
-    const missingField = requiredFields.find((field) => !payload?.[field])
-    if (missingField) {
-      return jsonResponse({ error: `Missing field: ${missingField}` }, { status: 400 })
-    }
+    const synthetic = await generateDemoQuery()
 
     const classification = await classifyMessage({
-      channel: payload.channel,
-      message: payload.message,
-      subject: payload.subject,
-      source_handle: payload.source_handle,
+      channel: synthetic.channel,
+      message: synthetic.message,
+      subject: synthetic.subject,
+      source_handle: synthetic.source_handle,
     })
 
     const { data, error } = await adminSupabase
       .from('queries')
       .insert([
         {
-          user_id: payload.userId,
-          channel: payload.channel,
-          message: payload.message,
-          subject: payload.subject ?? null,
-          source_handle: payload.source_handle ?? null,
+          user_id: synthetic.userId,
+          channel: synthetic.channel,
+          message: synthetic.message,
+          subject: synthetic.subject ?? null,
+          source_handle: synthetic.source_handle ?? null,
           department: classification.department,
           sentiment: classification.sentiment,
           urgency: classification.urgency,
@@ -53,18 +47,18 @@ export default async function handler(req: Request): Promise<Response> {
       .single()
 
     if (error) {
-      console.error('Supabase insert error', error)
-      return jsonResponse({ error: 'Failed to store query.' }, { status: 500 })
+      console.error('Supabase demo insert error', error)
+      return jsonResponse({ error: 'Failed to insert demo query.' }, { status: 500 })
     }
 
-    return jsonResponse(toClientQuery(data))
+    return jsonResponse(rowToClient(data))
   } catch (error) {
-    console.error('classify-and-route error', error)
-    return jsonResponse({ error: 'Classification failed.' }, { status: 500 })
+    console.error('generate-demo-query error', error)
+    return jsonResponse({ error: 'Failed to generate query.' }, { status: 500 })
   }
 }
 
-function toClientQuery(row: Record<string, any>) {
+function rowToClient(row: Record<string, any>) {
   return {
     id: row.id,
     userId: row.user_id,

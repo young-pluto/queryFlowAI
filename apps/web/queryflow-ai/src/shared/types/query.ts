@@ -5,13 +5,16 @@ export interface Query {
   userId: string
   channel: Channel
   message: string
+  subject?: string
+  sourceHandle?: string
   summary?: string
   tags?: string[]
   department?: string
   priority?: string
+  urgency?: number
   sentiment?: string
   status: string
-  assignedTo?: string
+  assignedTo?: string | null
   createdAt: string
   autoResponse?: string
 }

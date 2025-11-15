@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { Query } from '@/shared/types/query'
 import { channels } from '@/shared/constants/channels'
+import { useRealtimeQueries } from '@/hooks/useRealtimeQueries'
+import { updateQuery } from '@/services/queries'
+import { useToast } from '@/hooks/use-toast'
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'resolved'] as const
 
@@ -24,53 +28,12 @@ const STATUS_STYLES: Record<string, string> = {
   error: 'border-rose-200 bg-rose-50 text-rose-700',
 }
 
-const SAMPLE_QUERIES: Query[] = [
-  {
-    id: 'q-101',
-    userId: 'u-1',
-    channel: 'whatsapp',
-    message: 'My payment failed but the amount was deducted.',
-    summary: 'Payment failure reported via WhatsApp.',
-    tags: ['billing', 'payment'],
-    department: 'Billing',
-    priority: 'High',
-    sentiment: 'frustrated',
-    status: 'new',
-    assignedTo: undefined,
-    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-    autoResponse: 'Thanks for flagging this. Our billing team will investigate shortly.',
-  },
-  {
-    id: 'q-102',
-    userId: 'u-2',
-    channel: 'twitter',
-    message: 'Loving the new update but the analytics screen is slow.',
-    summary: 'Positive feedback with a performance concern.',
-    tags: ['performance'],
-    department: 'Product',
-    priority: 'Medium',
-    sentiment: 'positive',
-    status: 'in-progress',
-    assignedTo: 'Nora',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    autoResponse: 'Thanks for the feedback! We are optimizing analytics performance.',
-  },
-  {
-    id: 'q-103',
-    userId: 'u-3',
-    channel: 'email',
-    message: 'Need help resetting admin passwords for my team.',
-    summary: 'Admin is requesting password reset guidance.',
-    tags: ['admin', 'security'],
-    department: 'Support',
-    priority: 'Low',
-    sentiment: 'neutral',
-    status: 'resolved',
-    assignedTo: 'Alex',
-    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    autoResponse: 'We have sent you the reset instructions.',
-  },
-]
+const priorityFromUrgency = (urgency?: number) => {
+  if (urgency === undefined) return 'Normal'
+  if (urgency >= 4) return 'High'
+  if (urgency >= 2) return 'Medium'
+  return 'Low'
+}
 
 const statusLabel = (value: string) =>
   value
@@ -108,11 +71,9 @@ function QueryCard({ query, isActive, onClick }: QueryCardProps) {
             {query.department}
           </Badge>
         )}
-        {query.priority && (
-          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-            {query.priority}
-          </Badge>
-        )}
+        <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+          {priorityFromUrgency(query.urgency)}
+        </Badge>
       </div>
     </button>
   )
@@ -120,7 +81,7 @@ function QueryCard({ query, isActive, onClick }: QueryCardProps) {
 
 type QueryDetailPanelProps = {
   query: Query | null
-  onAssign: (id: string, assignee: string) => void
+  onAssign: (id: string, assignee?: string) => void
   onChangeStatus: (id: string, status: Query['status']) => void
 }
 
@@ -161,7 +122,7 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
         <section className="space-y-2 text-sm">
           <div className="grid grid-cols-2 gap-2">
             <DetailRow label="Department" value={query.department} />
-            <DetailRow label="Priority" value={query.priority} />
+            <DetailRow label="Priority" value={priorityFromUrgency(query.urgency)} />
             <DetailRow label="Sentiment" value={query.sentiment} />
             <DetailRow label="Assigned" value={query.assignedTo ?? 'Unassigned'} />
           </div>
@@ -236,24 +197,41 @@ function DetailRow({ label, value }: DetailRowProps) {
 }
 
 export default function AdminInboxPage() {
-  const [queries, setQueries] = useState<Query[]>(SAMPLE_QUERIES)
-  const [selectedId, setSelectedId] = useState(queries[0]?.id ?? null)
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const { data: queries = [] } = useRealtimeQueries(200)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const selectedQuery = useMemo(
-    () => queries.find((query) => query.id === selectedId) ?? null,
-    [queries, selectedId],
-  )
+  const selectedQuery = useMemo(() => {
+    if (!selectedId) return queries[0] ?? null
+    return queries.find((query) => query.id === selectedId) ?? queries[0] ?? null
+  }, [queries, selectedId])
 
-  const handleAssign = (id: string, assignee: string) => {
-    setQueries((prev) =>
-      prev.map((query) => (query.id === id ? { ...query, assignedTo: assignee } : query)),
-    )
+  const mutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Pick<Query, 'status' | 'assignedTo'>> }) =>
+      updateQuery(id, updates),
+    onError: (error) => {
+      toast({
+        title: 'Update failed',
+        description: (error as Error).message,
+        variant: 'destructive',
+      })
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Query updated',
+        description: `${data.status} • ${data.assignedTo ?? 'Unassigned'}`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['queries', { limit: 200 }] })
+    },
+  })
+
+  const handleAssign = (id: string, assignee?: string) => {
+    mutation.mutate({ id, updates: { assignedTo: assignee ?? null } })
   }
 
   const handleChangeStatus = (id: string, status: Query['status']) => {
-    setQueries((prev) =>
-      prev.map((query) => (query.id === id ? { ...query, status } : query)),
-    )
+    mutation.mutate({ id, updates: { status } })
   }
 
   return (
