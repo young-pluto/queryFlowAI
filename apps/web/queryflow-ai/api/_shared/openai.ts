@@ -145,19 +145,29 @@ function stripJsonMarkdown(text: string) {
   if (fenceMatch) {
     sanitized = fenceMatch[1].trim()
   }
-  // Remove trailing characters after closing brace
-  const lastBrace = sanitized.lastIndexOf('}')
-  if (lastBrace !== -1) {
-    sanitized = sanitized.slice(0, lastBrace + 1)
-  }
+  const extracted = extractJsonObject(sanitized)
   try {
-    return JSON.stringify(JSON.parse(sanitized.trim()))
+    return JSON.stringify(JSON.parse(extracted))
   } catch {
-    const match = sanitized.match(/\{[\s\S]*\}/)
-    if (match) {
-      return match[0]
-    }
-    return sanitized
+    return extracted
   }
+}
+
+function extractJsonObject(payload: string) {
+  const start = payload.indexOf('{')
+  if (start === -1) return payload.trim()
+  let depth = 0
+  for (let i = start; i < payload.length; i++) {
+    const char = payload[i]
+    if (char === '{') {
+      depth++
+    } else if (char === '}') {
+      depth--
+      if (depth === 0) {
+        return payload.slice(start, i + 1).trim()
+      }
+    }
+  }
+  return payload.slice(start).trim()
 }
 
