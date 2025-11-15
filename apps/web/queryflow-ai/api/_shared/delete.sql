@@ -3,6 +3,6 @@ returns void
 language sql
 security definer
 as $$
-  delete from queries;
+  truncate table public.queries;
 $$;
 
