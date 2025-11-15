@@ -7,7 +7,6 @@ import AdminAnalyticsPage from '@/pages/admin/analytics.tsx'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { triggerDemoQuery } from '@/services/queries'
-import { useToast } from '@/hooks/use-toast'
 
 const tabs = [
   { id: 'landing', label: 'Overview', component: 'landing' },
@@ -20,7 +19,6 @@ const tabs = [
 type TabId = (typeof tabs)[number]['id']
 
 function App() {
-  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<TabId>('landing')
   const [sessionActive, setSessionActive] = useState(false)
   const sessionInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -52,12 +50,7 @@ function App() {
     try {
       await triggerDemoQuery()
     } catch (error) {
-      console.error(error)
-      toast({
-        title: 'Demo generator failed',
-        description: (error as Error).message,
-        variant: 'destructive',
-      })
+      console.warn('Demo generator hiccup', error)
     }
   }
 
