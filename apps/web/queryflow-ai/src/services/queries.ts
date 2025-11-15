@@ -25,11 +25,18 @@ export async function updateQuery(
   return response.json()
 }
 
-export async function triggerDemoQuery(): Promise<Query> {
+export async function triggerDemoQuery(): Promise<Query[]> {
   const response = await fetch('/api/generate-demo-query', { method: 'POST' })
   if (!response.ok) {
     throw new Error('Failed to generate demo query.')
   }
   return response.json()
+}
+
+export async function clearQueries(): Promise<void> {
+  const response = await fetch('/api/queries', { method: 'DELETE' })
+  if (!response.ok) {
+    throw new Error('Failed to clear queries.')
+  }
 }
 

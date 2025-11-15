@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import type { Query } from '@/shared/types/query'
 import { channels } from '@/shared/constants/channels'
 import { useRealtimeQueries } from '@/hooks/useRealtimeQueries'
-import { updateQuery } from '@/services/queries'
+import { clearQueries, updateQuery } from '@/services/queries'
 import { useToast } from '@/hooks/use-toast'
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'resolved'] as const
@@ -243,12 +243,32 @@ export default function AdminInboxPage() {
           </p>
           <h1 className="text-2xl font-semibold">Inbox</h1>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {channels.map((channel) => (
             <Badge key={channel} variant="outline" className="capitalize">
               {channel}
             </Badge>
           ))}
+          <Button
+            type="button"
+            variant="outline"
+            className="ml-auto text-xs"
+            onClick={async () => {
+              try {
+                await clearQueries()
+                queryClient.invalidateQueries({ queryKey: ['queries', { limit: 200 }] })
+                toast({ title: 'Inbox cleared' })
+              } catch (error) {
+                toast({
+                  title: 'Failed to clear inbox',
+                  description: (error as Error).message,
+                  variant: 'destructive',
+                })
+              }
+            }}
+          >
+            Clear inbox
+          </Button>
         </div>
       </div>
 

@@ -35,6 +35,15 @@ export default async function handler(req: Request): Promise<Response> {
     return jsonResponse(data.map(toClientQuery))
   }
 
+  if (req.method === 'DELETE') {
+    const { error } = await adminSupabase.from('queries').delete().neq('id', '')
+    if (error) {
+      console.error('Supabase delete error', error)
+      return jsonResponse({ error: 'Failed to clear queries.' }, { status: 500 })
+    }
+    return jsonResponse({ success: true })
+  }
+
   return jsonResponse({ error: 'Method Not Allowed' }, { status: 405 })
 }
 
