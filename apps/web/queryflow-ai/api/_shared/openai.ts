@@ -92,9 +92,17 @@ export async function generateDemoQueryBatch(): Promise<DemoQueryPayload[]> {
     user: JSON.stringify({ seed }),
   })
 
-  const parsed = JSON.parse(stripJsonMarkdown(content))
-  const items = Array.isArray(parsed) ? parsed : [parsed]
-  return items as DemoQueryPayload[]
+  const sanitized = stripJsonMarkdown(content)
+  try {
+    const parsed = JSON.parse(sanitized)
+    if (Array.isArray(parsed)) {
+      return parsed as DemoQueryPayload[]
+    }
+    return [parsed as DemoQueryPayload]
+  } catch {
+    const objects = extractJsonObjects(sanitized)
+    return objects.map((chunk) => JSON.parse(chunk.trim()) as DemoQueryPayload)
+  }
 }
 
 async function callResponsesApi({
@@ -147,29 +155,35 @@ function stripJsonMarkdown(text: string) {
   if (fenceMatch) {
     sanitized = fenceMatch[1].trim()
   }
-  const extracted = extractJsonObject(sanitized)
-  try {
-    return JSON.stringify(JSON.parse(extracted))
-  } catch {
-    return extracted
-  }
+  return sanitized
 }
 
-function extractJsonObject(payload: string) {
-  const start = payload.indexOf('{')
-  if (start === -1) return payload.trim()
+function extractJsonObjects(payload: string) {
+  const chunks: string[] = []
   let depth = 0
-  for (let i = start; i < payload.length; i++) {
+  let start = -1
+
+  for (let i = 0; i < payload.length; i++) {
     const char = payload[i]
     if (char === '{') {
+      if (depth === 0) {
+        start = i
+      }
       depth++
     } else if (char === '}') {
       depth--
-      if (depth === 0) {
-        return payload.slice(start, i + 1).trim()
+      if (depth === 0 && start !== -1) {
+        chunks.push(payload.slice(start, i + 1))
+        start = -1
       }
     }
   }
-  return payload.slice(start).trim()
+
+  if (chunks.length === 0 && start !== -1) {
+    chunks.push(payload.slice(start))
+  }
+
+  return chunks.length > 0 ? chunks : [payload.trim()]
 }
+
 
