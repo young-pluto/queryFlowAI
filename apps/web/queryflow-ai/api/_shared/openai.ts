@@ -139,10 +139,16 @@ async function callResponsesApi({
 }
 
 function stripJsonMarkdown(text: string) {
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  if (match) {
-    return match[1].trim()
+  let sanitized = text.trim()
+  const fenceMatch = sanitized.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenceMatch) {
+    sanitized = fenceMatch[1].trim()
   }
-  return text.trim()
+  // Remove trailing characters after closing brace
+  const lastBrace = sanitized.lastIndexOf('}')
+  if (lastBrace !== -1) {
+    sanitized = sanitized.slice(0, lastBrace + 1)
+  }
+  return sanitized
 }
 
