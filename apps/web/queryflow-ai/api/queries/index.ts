@@ -36,7 +36,7 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   if (req.method === 'DELETE') {
-    const { error } = await adminSupabase.from('queries').delete().neq('id', null)
+    const { error } = await adminSupabase.rpc('delete_all_queries')
     if (error) {
       console.error('Supabase delete error', error)
       return jsonResponse({ error: 'Failed to clear queries.' }, { status: 500 })
