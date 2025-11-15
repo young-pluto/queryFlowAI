@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { Query } from '@/shared/types/query'
 import { channels } from '@/shared/constants/channels'
+import type { Channel } from '@/shared/constants/channels'
 import { useRealtimeQueries } from '@/hooks/useRealtimeQueries'
 import { clearQueries, updateQuery } from '@/services/queries'
 import { useToast } from '@/hooks/use-toast'
@@ -201,11 +202,17 @@ export default function AdminInboxPage() {
   const queryClient = useQueryClient()
   const { data: queries = [] } = useRealtimeQueries(200)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [channelFilter, setChannelFilter] = useState<'all' | Channel>('all')
+
+  const filteredQueries = useMemo(() => {
+    if (channelFilter === 'all') return queries
+    return queries.filter((query) => query.channel === channelFilter)
+  }, [queries, channelFilter])
 
   const selectedQuery = useMemo(() => {
-    if (!selectedId) return queries[0] ?? null
-    return queries.find((query) => query.id === selectedId) ?? queries[0] ?? null
-  }, [queries, selectedId])
+    if (!selectedId) return filteredQueries[0] ?? null
+    return filteredQueries.find((query) => query.id === selectedId) ?? filteredQueries[0] ?? null
+  }, [filteredQueries, selectedId])
 
   const mutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Pick<Query, 'status' | 'assignedTo'>> }) =>
@@ -244,11 +251,22 @@ export default function AdminInboxPage() {
           <h1 className="text-2xl font-semibold">Inbox</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {channels.map((channel) => (
-            <Badge key={channel} variant="outline" className="capitalize">
-              {channel}
-            </Badge>
-          ))}
+          {[{ label: 'All', value: 'all' }, ...channels.map((channel) => ({ label: channel, value: channel }))].map(
+            ({ label, value }) => (
+              <Button
+                key={value}
+                type="button"
+                variant={channelFilter === value ? 'default' : 'outline'}
+                className="capitalize"
+                onClick={() => {
+                  setChannelFilter(value as 'all' | Channel)
+                  setSelectedId(null)
+                }}
+              >
+                {label}
+              </Button>
+            ),
+          )}
           <Button
             type="button"
             variant="outline"
@@ -276,10 +294,12 @@ export default function AdminInboxPage() {
         <div className="space-y-3 rounded-xl border p-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Total queries</span>
-            <span>{queries.length}</span>
+            <span>
+              {filteredQueries.length} / {queries.length}
+            </span>
           </div>
           <div className="space-y-2">
-            {queries.map((query) => (
+            {filteredQueries.map((query) => (
               <QueryCard
                 key={query.id}
                 query={query}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import HomePage from '@/pages'
-import UserSubmitPage from '@/pages/UserSubmit'
+import RoutingPage from '@/pages'
+import UserConsolePage from '@/pages/UserConsole'
 import { LandingPage } from '@/pages/LandingPage'
 import AdminInboxPage from '@/pages/admin/inbox'
 import AdminAnalyticsPage from '@/pages/admin/analytics.tsx'
@@ -10,8 +10,8 @@ import { triggerDemoQuery } from '@/services/queries'
 
 const tabs = [
   { id: 'landing', label: 'Overview', component: 'landing' },
-  { id: 'user', label: 'User Console', component: 'user' },
-  { id: 'user-submit', label: 'User Submit', component: 'user-submit' },
+  { id: 'routing', label: 'Routing', component: 'routing' },
+  { id: 'user-console', label: 'User Console', component: 'user-console' },
   { id: 'admin', label: 'Admin Inbox', component: 'admin' },
   { id: 'analytics', label: 'Analytics', component: 'analytics' },
 ] as const
@@ -65,10 +65,10 @@ function App() {
             navigate={(tab) => setActiveTab(tab as TabId)}
           />
         )
-      case 'user':
-        return <HomePage />
-      case 'user-submit':
-        return <UserSubmitPage />
+      case 'routing':
+        return <RoutingPage />
+      case 'user-console':
+        return <UserConsolePage />
       case 'admin':
         return <AdminInboxPage />
       case 'analytics':

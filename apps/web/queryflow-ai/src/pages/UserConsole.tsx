@@ -12,7 +12,7 @@ import { classifyAndRoute } from '@/services/classify'
 
 const USER_ID = 'user-001'
 
-export default function UserSubmitPage() {
+export default function UserConsolePage() {
   const [channel, setChannel] = useState<Channel>('whatsapp')
   const [preview, setPreview] = useState<object | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -68,9 +68,12 @@ export default function UserSubmitPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">User submission</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            User console
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Compose and submit queries</h1>
           <p className="text-sm text-muted-foreground">
-            Switch context, pick a channel, and compose a payload.
+            Switch context, pick a channel, and send a live complaint into the routing engine.
           </p>
         </div>
         <RoleSwitcher />

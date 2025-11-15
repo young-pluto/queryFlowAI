@@ -1,25 +1,9 @@
-import { useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import {
-  ArrowRight,
-  BarChart2,
-  Bot,
-  Database,
-  Settings,
-  Sparkles,
-} from 'lucide-react'
+import { useMemo } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { ChannelPicker } from '@/components/ChannelPicker'
-import { EmailComposer } from '@/components/composers/EmailComposer'
-import { TwitterComposer } from '@/components/composers/TwitterComposer'
-import { WhatsAppComposer } from '@/components/composers/WhatsAppComposer'
-import { RoleSwitcher } from '@/components/RoleSwitcher'
+import { BarChart2, Bot, Database, Settings } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Navbar } from '@/components/ui/navbar'
 import {
   Sidebar,
@@ -37,11 +21,6 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { useToast } from '@/hooks/use-toast'
-import type { Channel } from '@/shared/constants/channels'
-import type { Query } from '@/shared/types/query'
-import { classifyAndRoute } from '@/services/classify'
-import { buildClassifyRequest, type ClassifyRequest } from '@/shared/utils/composer'
 import { cn } from '@/lib/utils'
 import { useRealtimeQueries } from '@/hooks/useRealtimeQueries'
 
@@ -54,30 +33,6 @@ const workspaces = [
 
 const reviewers = ['AB', 'CD', 'EF']
 
-const DEFAULT_USER_ID = 'user-001'
-
-const STATUS_VARIANTS: Record<string, string> = {
-  pending: 'border-amber-500 text-amber-600',
-  new: 'border-slate-400 text-slate-600',
-  'in-progress': 'border-amber-500 text-amber-700',
-  resolved: 'border-emerald-500 text-emerald-600',
-  error: 'border-rose-500 text-rose-600',
-}
-
-const createTempId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `temp-${Date.now()}`
-
-const buildOptimisticQuery = (id: string, request: ClassifyRequest): Query => ({
-  id,
-  userId: request.userId,
-  channel: request.channel,
-  message: request.message,
-  status: 'pending',
-  createdAt: new Date().toISOString(),
-})
-
 const formatRelativeTime = (value: string) =>
   formatDistanceToNow(new Date(value), { addSuffix: true })
 
@@ -88,20 +43,16 @@ const priorityFromUrgency = (urgency?: number) => {
   return 'Low'
 }
 
-export default function HomePage() {
-  const { toast } = useToast()
-  const [channel, setChannel] = useState<Channel>('whatsapp')
-  const [optimisticQueries, setOptimisticQueries] = useState<Query[]>([])
-  const { data: liveQueries = [] } = useRealtimeQueries(100)
+const STATUS_VARIANTS: Record<string, string> = {
+  new: 'border-slate-400 text-slate-600',
+  'in-progress': 'border-amber-500 text-amber-700',
+  resolved: 'border-emerald-500 text-emerald-600',
+  pending: 'border-amber-500 text-amber-600',
+  error: 'border-rose-500 text-rose-600',
+}
 
-  const classifyMutation = useMutation<Query, Error, { request: ClassifyRequest }>({
-    mutationFn: ({ request }) => classifyAndRoute(request),
-  })
-
-  const combinedQueries = useMemo(
-    () => [...optimisticQueries, ...liveQueries],
-    [optimisticQueries, liveQueries],
-  )
+export default function RoutingPage() {
+  const { data: liveQueries = [] } = useRealtimeQueries(200)
 
   const insights = useMemo(() => {
     const total = liveQueries.length
@@ -121,48 +72,6 @@ export default function HomePage() {
       { title: 'Avg urgency', metric: avgUrgency, delta: '1 (low) → 5 (critical)' },
     ]
   }, [liveQueries])
-
-  const handleComposerSubmit = (target: Channel, payload: unknown) => {
-    const request = buildClassifyRequest(target, payload, DEFAULT_USER_ID)
-
-    if (!request) {
-      toast({
-        title: 'Add details before sending',
-        description: 'Please include content for this channel.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const tempId = createTempId()
-    const optimisticQuery = buildOptimisticQuery(tempId, request)
-    setOptimisticQueries((prev) => [optimisticQuery, ...prev])
-
-    classifyMutation.mutate(
-      { request },
-      {
-        onSuccess: (data) => {
-          toast({
-            title: 'Query routed',
-            description: `Department: ${data.department}`,
-          })
-        },
-        onError: (error) => {
-          setOptimisticQueries((prev) =>
-            prev.map((query) => (query.id === tempId ? { ...query, status: 'error' } : query)),
-          )
-          toast({
-            title: 'Failed to route',
-            description: error.message,
-            variant: 'destructive',
-          })
-        },
-        onSettled: () => {
-          setOptimisticQueries((prev) => prev.filter((query) => query.id !== tempId))
-        },
-      },
-    )
-  }
 
   return (
     <SidebarProvider>
@@ -191,27 +100,22 @@ export default function HomePage() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarSeparator />
-        <SidebarFooter>
-          <Button variant="outline" className="gap-2">
-            <Sparkles className="h-4 w-4" />
-            Launch new flow
-          </Button>
-        </SidebarFooter>
+        <SidebarFooter />
       </Sidebar>
       <SidebarInset>
         <Navbar />
         <div className="flex flex-1 flex-col gap-6 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight">Playground</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                Routing manager
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight">Live routing overview</h1>
               <p className="text-sm text-muted-foreground">
-                Monitor prompts and tune datasets in real-time.
+                See every AI decision across channels and departments in one place.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <RoleSwitcher />
-              <SidebarTrigger className="hidden md:inline-flex" />
-            </div>
+            <SidebarTrigger className="hidden md:inline-flex" />
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -227,52 +131,6 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick prompt experiment</CardTitle>
-              <CardDescription>
-                Prototype a new intent and share it with your team instantly.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input placeholder="Give your test a memorable title..." />
-              <Textarea placeholder="Describe what the assistant should do..." rows={6} />
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => toast({ title: 'Prompt dispatched to staging workers' })}>
-                  Run prompt
-                </Button>
-                <Button variant="outline">
-                  Schedule later
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Channel composer</CardTitle>
-              <CardDescription>Craft the perfect reply for each channel.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ChannelPicker value={channel} onChange={setChannel} />
-              {channel === 'whatsapp' && (
-                <WhatsAppComposer onSubmit={(payload) => handleComposerSubmit('whatsapp', payload)} />
-              )}
-              {channel === 'twitter' && (
-                <TwitterComposer onSubmit={(payload) => handleComposerSubmit('twitter', payload)} />
-              )}
-              {channel === 'email' && (
-                <EmailComposer onSubmit={(payload) => handleComposerSubmit('email', payload)} />
-              )}
-              {channel === 'web' && (
-                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Web chat is coming soon.
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>
@@ -304,11 +162,11 @@ export default function HomePage() {
               <CardDescription>Latest submissions and routing decisions.</CardDescription>
             </CardHeader>
             <CardContent>
-              {combinedQueries.length === 0 ? (
+              {liveQueries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Compose a message to see it here.</p>
               ) : (
                 <div className="space-y-3">
-                  {combinedQueries.map((query) => (
+                  {liveQueries.map((query) => (
                     <div key={query.id} className="rounded-xl border p-3 shadow-sm">
                       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
                         <span className="font-semibold capitalize">{query.channel}</span>

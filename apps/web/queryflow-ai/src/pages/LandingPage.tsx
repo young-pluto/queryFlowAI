@@ -46,15 +46,22 @@ export function LandingPage({ onStartSession, onStopSession, isSessionActive, na
           Spin up a demo contact center where OpenAI classifies intent, sentiment, urgency, and auto-assigns work across teams.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" onClick={() => navigate('user')}>
+          <Button size="lg" onClick={() => navigate('user-console')}>
             Enter User Console
           </Button>
           <Button
             size="lg"
             variant="secondary"
+            onClick={() => navigate('routing')}
+          >
+            View Routing Overview
+          </Button>
+          <Button
+            size="lg"
+            variant="ghost"
             onClick={() => navigate('admin')}
           >
-            Open Admin Dashboard
+            Open Admin Inbox
           </Button>
         </div>
       </section>
