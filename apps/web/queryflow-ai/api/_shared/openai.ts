@@ -40,33 +40,11 @@ Return ONLY valid JSON.
 export async function classifyMessage(
   payload: ClassificationRequest,
 ): Promise<ClassificationResult> {
-  const completion = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: CLASSIFICATION_PROMPT },
-        { role: 'user', content: JSON.stringify(payload) },
-      ],
-      response_format: { type: 'json_object' },
-    }),
+  const content = await callResponsesApi({
+    temperature: 0.2,
+    system: CLASSIFICATION_PROMPT,
+    user: JSON.stringify(payload),
   })
-
-  if (!completion.ok) {
-    const errText = await completion.text()
-    throw new Error(`OpenAI classification failed: ${errText}`)
-  }
-
-  const data = await completion.json()
-  const content = data?.choices?.[0]?.message?.content
-  if (!content) {
-    throw new Error('OpenAI classification returned empty content.')
-  }
 
   const parsed = JSON.parse(content) as ClassificationResult
   parsed.urgency = Math.min(5, Math.max(1, Math.round(parsed.urgency || 1)))
@@ -106,7 +84,25 @@ Guidelines:
 `
 
 export async function generateDemoQuery(): Promise<DemoQueryResult> {
-  const completion = await fetch('https://api.openai.com/v1/chat/completions', {
+  const content = await callResponsesApi({
+    temperature: 0.9,
+    system: DEMO_PROMPT,
+    user: `seed:${Math.random()}`
+  })
+
+  return JSON.parse(content) as DemoQueryResult
+}
+
+async function callResponsesApi({
+  system,
+  user,
+  temperature,
+}: {
+  system: string
+  user: string
+  temperature: number
+}): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -114,24 +110,29 @@ export async function generateDemoQuery(): Promise<DemoQueryResult> {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: 0.8,
-      messages: [
-        { role: 'system', content: DEMO_PROMPT },
+      temperature,
+      input: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
       ],
       response_format: { type: 'json_object' },
     }),
   })
 
-  if (!completion.ok) {
-    throw new Error(`OpenAI demo generator failed: ${await completion.text()}`)
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed: ${await response.text()}`)
   }
 
-  const data = await completion.json()
-  const content = data?.choices?.[0]?.message?.content
-  if (!content) {
-    throw new Error('OpenAI demo generator returned empty content.')
+  const data = await response.json()
+  const text =
+    data?.output?.[0]?.content?.[0]?.text?.value ??
+    data?.output_text?.[0] ??
+    data?.choices?.[0]?.message?.content
+
+  if (!text) {
+    throw new Error('OpenAI returned empty content.')
   }
 
-  return JSON.parse(content) as DemoQueryResult
+  return text
 }
 
