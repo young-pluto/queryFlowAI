@@ -55,7 +55,7 @@ export async function classifyMessage(
   return parsed
 }
 
-type DemoQueryResult = {
+type DemoQueryPayload = {
   userId: string
   channel: string
   message: string
@@ -65,9 +65,9 @@ type DemoQueryResult = {
 
 const DEMO_PROMPT = `
 You are simulating customer support traffic across multiple teams.
-Return ONLY JSON shaped like:
+Return ONLY JSON shaped like an array of 2 to 3 items, each item:
 {
-  "userId": "user-###",
+  "userId": "user-00#",
   "channel": "<whatsapp|twitter|email|web>",
   "message": "...",
   "subject": "<optional>",
@@ -84,7 +84,7 @@ Guidelines:
 - Return raw JSON (no Markdown code fences).
 `
 
-export async function generateDemoQuery(): Promise<DemoQueryResult> {
+export async function generateDemoQueryBatch(): Promise<DemoQueryPayload[]> {
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const content = await callResponsesApi({
     temperature: 0.9,
@@ -92,7 +92,9 @@ export async function generateDemoQuery(): Promise<DemoQueryResult> {
     user: JSON.stringify({ seed }),
   })
 
-  return JSON.parse(stripJsonMarkdown(content)) as DemoQueryResult
+  const parsed = JSON.parse(stripJsonMarkdown(content))
+  const items = Array.isArray(parsed) ? parsed : [parsed]
+  return items as DemoQueryPayload[]
 }
 
 async function callResponsesApi({

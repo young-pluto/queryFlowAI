@@ -1,4 +1,4 @@
-import { generateDemoQuery, classifyMessage } from '../_shared/openai'
+import { generateDemoQueryBatch, classifyMessage } from '../_shared/openai'
 import { adminSupabase } from '../_shared/supabase'
 import { corsHeaders, jsonResponse } from '../_shared/response'
 
@@ -16,19 +16,18 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   try {
-    const synthetic = await generateDemoQuery()
+    const syntheticBatch = await generateDemoQueryBatch()
 
-    const classification = await classifyMessage({
-      channel: synthetic.channel,
-      message: synthetic.message,
-      subject: synthetic.subject,
-      source_handle: synthetic.source_handle,
-    })
+    const rows = await Promise.all(
+      syntheticBatch.map(async (synthetic) => {
+        const classification = await classifyMessage({
+          channel: synthetic.channel,
+          message: synthetic.message,
+          subject: synthetic.subject,
+          source_handle: synthetic.source_handle,
+        })
 
-    const { data, error } = await adminSupabase
-      .from('queries')
-      .insert([
-        {
+        return {
           user_id: synthetic.userId,
           channel: synthetic.channel,
           message: synthetic.message,
@@ -41,17 +40,21 @@ export default async function handler(req: Request): Promise<Response> {
           tags: classification.tags,
           auto_response: classification.auto_response,
           status: 'new',
-        },
-      ])
-      .select()
-      .single()
+        }
+      }),
+    )
 
-    if (error) {
+    const { data, error } = await adminSupabase
+      .from('queries')
+      .insert(rows)
+      .select()
+
+    if (error || !data) {
       console.error('Supabase demo insert error', error)
       return jsonResponse({ error: 'Failed to insert demo query.' }, { status: 500 })
     }
 
-    return jsonResponse(rowToClient(data))
+    return jsonResponse(data.map(rowToClient))
   } catch (error) {
     console.error('generate-demo-query error', error)
     return jsonResponse({ error: 'Failed to generate query.' }, { status: 500 })
