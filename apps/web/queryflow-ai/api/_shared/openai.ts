@@ -34,7 +34,7 @@ Given the JSON payload describing the user's channel, subject (optional) and mes
   "tags": array of 1-4 lowercase keywords,
   "auto_response": short reassuring response (<= 180 characters)
 }
-Return ONLY valid JSON.
+Return ONLY valid JSON (no Markdown code fences).
 `
 
 export async function classifyMessage(
@@ -46,7 +46,7 @@ export async function classifyMessage(
     user: JSON.stringify(payload),
   })
 
-  const parsed = JSON.parse(content) as ClassificationResult
+  const parsed = JSON.parse(stripJsonMarkdown(content)) as ClassificationResult
   parsed.urgency = Math.min(5, Math.max(1, Math.round(parsed.urgency || 1)))
   parsed.tags = Array.isArray(parsed.tags)
     ? parsed.tags.map((tag: string) => tag?.toLowerCase()).filter(Boolean)
@@ -81,6 +81,7 @@ Guidelines:
 - When channel is email, include "subject".
 - For WhatsApp/web, omit subject and handle.
 - Alternate urgency implicitly via wording (panicked vs casual).
+- Return raw JSON (no Markdown code fences).
 `
 
 export async function generateDemoQuery(): Promise<DemoQueryResult> {
@@ -90,7 +91,7 @@ export async function generateDemoQuery(): Promise<DemoQueryResult> {
     user: `seed:${Math.random()}`
   })
 
-  return JSON.parse(content) as DemoQueryResult
+  return JSON.parse(stripJsonMarkdown(content)) as DemoQueryResult
 }
 
 async function callResponsesApi({
@@ -135,5 +136,13 @@ async function callResponsesApi({
   }
 
   return textCandidate
+}
+
+function stripJsonMarkdown(text: string) {
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (match) {
+    return match[1].trim()
+  }
+  return text.trim()
 }
 
