@@ -115,7 +115,6 @@ async function callResponsesApi({
         { role: 'system', content: system },
         { role: 'user', content: user },
       ],
-      response_format: { type: 'json_object' },
     }),
   })
 
