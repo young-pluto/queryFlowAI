@@ -5,12 +5,14 @@ export const config = {
   runtime: 'edge',
 }
 
-export default async function handler(req: Request, context: { params: { id: string } }): Promise<Response> {
+export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
 
-  const id = context?.params?.id
+  const url = new URL(req.url)
+  const segments = url.pathname.split('/')
+  const id = segments[segments.length - 1]
   if (!id) {
     return jsonResponse({ error: 'Missing query id' }, { status: 400 })
   }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,15 @@ import { clearQueries, updateQuery } from '@/services/queries'
 import { useToast } from '@/hooks/use-toast'
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'resolved'] as const
+const ASSIGNEE_OPTIONS = [
+  'Technical Support',
+  'Billing',
+  'Feedback/Feature Request',
+  'HR / Internal',
+  'Logistics',
+  'Maintenance',
+  'General Inquiry',
+] as const
 
 const STATUS_STYLES: Record<string, string> = {
   new: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -88,6 +97,11 @@ type QueryDetailPanelProps = {
 
 function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelProps) {
   const [note, setNote] = useState('')
+  const [manualAssignee, setManualAssignee] = useState<string>('Unassigned')
+
+  useEffect(() => {
+    setManualAssignee(query?.assignedTo ?? 'Unassigned')
+  }, [query?.assignedTo, query?.id])
 
   if (!query) {
     return (
@@ -156,6 +170,13 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
             >
               {query.assignedTo ? `Reassign (${query.assignedTo})` : 'Assign to me'}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onAssign(query.id, query.department ?? 'AI Routing')}
+            >
+              Auto assign (AI)
+            </Button>
             <select
               className="rounded-md border px-3 py-2 text-sm"
               value={query.status}
@@ -167,6 +188,27 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <label className="flex items-center gap-2 text-muted-foreground">
+              Assign to:
+              <select
+                className="rounded-md border px-3 py-2 text-sm"
+                value={manualAssignee}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setManualAssignee(value)
+                  onAssign(query.id, value === 'Unassigned' ? undefined : value)
+                }}
+              >
+                <option value="Unassigned">Unassigned</option>
+                {ASSIGNEE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <Textarea
             value={note}
