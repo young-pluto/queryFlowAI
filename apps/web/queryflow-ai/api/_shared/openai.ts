@@ -85,10 +85,11 @@ Guidelines:
 `
 
 export async function generateDemoQuery(): Promise<DemoQueryResult> {
+  const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const content = await callResponsesApi({
     temperature: 0.9,
     system: DEMO_PROMPT,
-    user: `seed:${Math.random()}`
+    user: JSON.stringify({ seed }),
   })
 
   return JSON.parse(stripJsonMarkdown(content)) as DemoQueryResult
@@ -149,6 +150,10 @@ function stripJsonMarkdown(text: string) {
   if (lastBrace !== -1) {
     sanitized = sanitized.slice(0, lastBrace + 1)
   }
-  return sanitized
+  try {
+    return JSON.stringify(JSON.parse(sanitized.trim()))
+  } catch {
+    return sanitized
+  }
 }
 
