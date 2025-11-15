@@ -155,6 +155,7 @@ function stripJsonMarkdown(text: string) {
   if (fenceMatch) {
     sanitized = fenceMatch[1].trim()
   }
+  sanitized = sanitized.replace(/(['"])?([A-Za-z0-9_]+)(['"])?\s*:/g, '"$2":')
   return sanitized
 }
 
@@ -185,5 +186,6 @@ function extractJsonObjects(payload: string) {
 
   return chunks.length > 0 ? chunks : [payload.trim()]
 }
+
 
 
