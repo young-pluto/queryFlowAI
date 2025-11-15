@@ -123,15 +123,17 @@ async function callResponsesApi({
   }
 
   const data = await response.json()
-  const text =
+  const textCandidate =
     data?.output?.[0]?.content?.[0]?.text?.value ??
+    data?.output?.[0]?.content?.[0]?.text ??
     data?.output_text?.[0] ??
     data?.choices?.[0]?.message?.content
 
-  if (!text) {
+  if (!textCandidate || typeof textCandidate !== 'string') {
+    console.error('OpenAI responses payload', JSON.stringify(data, null, 2))
     throw new Error('OpenAI returned empty content.')
   }
 
-  return text
+  return textCandidate
 }
 
