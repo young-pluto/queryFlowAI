@@ -29,7 +29,7 @@ function App() {
     if (sessionActive) return
     setSessionActive(true)
     fireDemoQuery()
-    sessionInterval.current = setInterval(fireDemoQuery, 15000)
+    sessionInterval.current = setInterval(fireDemoQuery, 7000)
   }
 
   const stopSession = () => {

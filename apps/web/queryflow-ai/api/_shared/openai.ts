@@ -86,9 +86,23 @@ type DemoQueryResult = {
 }
 
 const DEMO_PROMPT = `
-Generate a realistic customer message for a multi-channel support demo.
-Return JSON: { "userId": "<id>", "channel": one of ["whatsapp","twitter","email","web"], "message": "...", "subject": optional string, "source_handle": optional string for social channels }.
-Keep the message under 220 characters, topical, and varied (billing, outages, feature requests, HR, logistics, maintenance, general inquiries).
+You are simulating customer support traffic across multiple teams.
+Return ONLY JSON shaped like:
+{
+  "userId": "user-###",
+  "channel": "<whatsapp|twitter|email|web>",
+  "message": "...",
+  "subject": "<optional>",
+  "source_handle": "<optional social handle>"
+}
+Guidelines:
+- Randomly select a channel each time; do NOT repeat the same channel twice in a row.
+- Vary topics: cycle between billing, shipping/logistics, access/security incidents, HR/internal issues, product feedback, outages, maintenance requests, general inquiries.
+- Give the user message a distinct voice (short, under 220 chars) and mention relevant context (e.g., region, team size, subscription tier) to keep the demo lively.
+- When channel is Twitter, include "source_handle".
+- When channel is email, include "subject".
+- For WhatsApp/web, omit subject and handle.
+- Alternate urgency implicitly via wording (panicked vs casual).
 `
 
 export async function generateDemoQuery(): Promise<DemoQueryResult> {
