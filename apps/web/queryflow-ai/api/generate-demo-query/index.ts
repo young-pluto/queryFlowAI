@@ -77,4 +77,3 @@ function rowToClient(row: Record<string, any>) {
     createdAt: row.created_at,
   }
 }
-
