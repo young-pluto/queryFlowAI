@@ -153,6 +153,10 @@ function stripJsonMarkdown(text: string) {
   try {
     return JSON.stringify(JSON.parse(sanitized.trim()))
   } catch {
+    const match = sanitized.match(/\{[\s\S]*\}/)
+    if (match) {
+      return match[0]
+    }
     return sanitized
   }
 }
