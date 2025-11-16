@@ -244,17 +244,17 @@ function DetailRow({ label, value, animateKey }: DetailRowProps) {
     <div className="rounded-lg border bg-card px-3 py-2 text-xs">
       <p className="text-muted-foreground">{label}</p>
       {animateKey ? (
-        <motion.span
+        <motion.p
           key={animateKey}
           initial={{ backgroundColor: 'rgba(59,130,246,0.25)' }}
           animate={{ backgroundColor: 'transparent' }}
           transition={{ duration: 0.9 }}
-          className="inline-flex rounded-md px-2 py-0.5 font-medium text-foreground"
+          className="mt-1 rounded-md px-2 py-1 text-sm font-medium text-foreground"
         >
           {value ?? '—'}
-        </motion.span>
+        </motion.p>
       ) : (
-        <p className="font-medium text-foreground">{value ?? '—'}</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{value ?? '—'}</p>
       )}
     </div>
   )
