@@ -6,7 +6,15 @@ type LandingPageProps = {
   onStartSession: () => void
   onStopSession: () => void
   isSessionActive: boolean
+  sessionCountdown: number
   navigate: (tab: string) => void
+}
+
+const formatCountdown = (value: number) => {
+  const safe = Math.max(0, value)
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 const features = [
@@ -32,7 +40,13 @@ const features = [
   },
 ]
 
-export function LandingPage({ onStartSession, onStopSession, isSessionActive, navigate }: LandingPageProps) {
+export function LandingPage({
+  onStartSession,
+  onStopSession,
+  isSessionActive,
+  sessionCountdown,
+  navigate,
+}: LandingPageProps) {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-12">
       <section className="text-center">
@@ -49,18 +63,10 @@ export function LandingPage({ onStartSession, onStopSession, isSessionActive, na
           <Button size="lg" onClick={() => navigate('user-console')}>
             Enter User Console
           </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={() => navigate('routing')}
-          >
+          <Button size="lg" variant="secondary" onClick={() => navigate('routing')}>
             View Routing Overview
           </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            onClick={() => navigate('admin')}
-          >
+          <Button size="lg" variant="ghost" onClick={() => navigate('admin')}>
             Open Admin Inbox
           </Button>
         </div>
@@ -94,14 +100,19 @@ export function LandingPage({ onStartSession, onStopSession, isSessionActive, na
           <div className="flex flex-col gap-2 md:text-right">
             <Button
               size="lg"
-              variant={isSessionActive ? 'outline' : 'default'}
               onClick={isSessionActive ? onStopSession : onStartSession}
-              className="font-semibold"
+              className={
+                isSessionActive
+                  ? 'border border-blue-200 bg-white/90 text-blue-900 transition hover:bg-white'
+                  : 'bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-400 text-white shadow-lg hover:opacity-90'
+              }
             >
-              {isSessionActive ? 'Stop session' : 'Start session'}
+              {isSessionActive ? `Stop session (${formatCountdown(sessionCountdown)})` : 'Start session'}
             </Button>
             <p className="text-xs text-blue-100/80">
-              Generates a new multi-channel query every ~15 seconds via OpenAI.
+              {isSessionActive
+                ? `Session auto-stops in ${formatCountdown(sessionCountdown)}`
+                : 'Generates a fresh multi-channel query every few seconds.'}
             </p>
           </div>
         </div>

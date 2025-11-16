@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import type { Channel } from '@/shared/constants/channels'
 import { buildClassifyRequest } from '@/shared/utils/composer'
 import { classifyAndRoute } from '@/services/classify'
+import { Loader2 } from 'lucide-react'
 
 const USER_ID = 'user-001'
 
@@ -90,7 +91,10 @@ export default function UserConsolePage() {
       </Card>
 
       {isSubmitting && (
-        <p className="text-sm text-muted-foreground">Submitting to classifier...</p>
+        <div className="flex items-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Sending payload to classifier…</span>
+        </div>
       )}
 
       {renderComposer()}
@@ -102,9 +106,18 @@ export default function UserConsolePage() {
           </h2>
         </div>
         <Separator className="my-2" />
-        <pre className="max-h-64 overflow-auto rounded-lg bg-muted p-4 text-sm">
-          {preview ? JSON.stringify(preview, null, 2) : 'Payload will appear here after you submit.'}
-        </pre>
+        <div className="max-h-64 overflow-auto rounded-lg bg-muted p-4 font-mono text-sm">
+          {isSubmitting ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Fetching payload…</span>
+            </div>
+          ) : preview ? (
+            <pre className="whitespace-pre-wrap text-left">{JSON.stringify(preview, null, 2)}</pre>
+          ) : (
+            'Payload will appear here after you submit.'
+          )}
+        </div>
       </div>
     </div>
   )

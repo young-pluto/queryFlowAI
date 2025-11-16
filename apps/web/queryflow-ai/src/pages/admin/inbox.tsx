@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -139,7 +140,11 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
             <DetailRow label="Department" value={query.department} />
             <DetailRow label="Priority" value={priorityFromUrgency(query.urgency)} />
             <DetailRow label="Sentiment" value={query.sentiment} />
-            <DetailRow label="Assigned" value={query.assignedTo ?? 'Unassigned'} />
+            <DetailRow
+              label="Assigned"
+              value={query.assignedTo ?? 'Unassigned'}
+              animateKey={query.assignedTo ?? 'Unassigned'}
+            />
           </div>
           {query.tags?.length ? (
             <div className="flex flex-wrap gap-2">
@@ -228,13 +233,26 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
 type DetailRowProps = {
   label: string
   value?: string | null
+  animateKey?: string | null
 }
 
-function DetailRow({ label, value }: DetailRowProps) {
+function DetailRow({ label, value, animateKey }: DetailRowProps) {
   return (
     <div className="rounded-lg border bg-card px-3 py-2 text-xs">
       <p className="text-muted-foreground">{label}</p>
-      <p className="font-medium text-foreground">{value ?? '—'}</p>
+      {animateKey ? (
+        <motion.span
+          key={animateKey}
+          initial={{ backgroundColor: 'rgba(59,130,246,0.25)' }}
+          animate={{ backgroundColor: 'transparent' }}
+          transition={{ duration: 0.8 }}
+          className="inline-flex rounded-md px-2 py-0.5 font-medium text-foreground"
+        >
+          {value ?? '—'}
+        </motion.span>
+      ) : (
+        <p className="font-medium text-foreground">{value ?? '—'}</p>
+      )}
     </div>
   )
 }
