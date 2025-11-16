@@ -54,6 +54,8 @@ pnpm dev        # runs Vite on http://localhost:5173
 
 Add them locally via `.env` / `.env.local` and on Vercel under Project Settings → Environment Variables.
 
+> **Sharing preview:** Update the OG/Twitter meta tags in `apps/web/queryflow-ai/index.html` with your Firebase (or other CDN) image URL so every share renders a branded thumbnail.
+
 ### Supabase Setup
 
 1. Create the `queries` table (id UUID default, user/channel/message fields, status, assigned_to, etc.).
