@@ -1,8 +1,14 @@
-# QueryFlow AI
+# QueryFlow AI · OpenAI-Powered Query Ops Demo
 
-QueryFlow AI is an interactive, demo-friendly contact center that showcases how modern support teams can triage, classify, and route multi-channel conversations with OpenAI, Supabase, and a responsive React UI. It combines a “User Console” for composing messages, a “Routing” hub that visualizes AI decisions, and an “Admin Inbox” where operators manage status, assignments, and notes in real time.
+QueryFlow AI is a live, interactive contact-center simulator that proves how modern teams can triage, classify, and route multi-channel conversations using OpenAI + Supabase + a polished React front end. It combines:
 
-## Why it’s interesting
+- **User Console** – compose channel-specific payloads and preview the exact JSON sent to the backend.
+- **Routing hub** – watch AI-generated traffic stream in with sentiment/urgency analytics.
+- **Admin Inbox** – filter, assign, and action queries with animations, notes, and Realtime updates.
+
+The entire experience is designed for demo environments or judging panels: one click starts a “session,” OpenAI generates realistic inbound queries every few seconds, and Supabase broadcasts them to every tab.
+
+## Why It’s Interesting
 
 - **Innovation:** Live demo mode streams realistic traffic by prompting OpenAI’s Responses API, auto-classifying each query (department, sentiment, urgency, summary, tags, suggested reply) and writing the result to Supabase. The experience feels “alive” for judges or stakeholders without needing real users.
 - **Creativity & Product Thinking:** The app mirrors a real workspace—users compose per-channel payloads, admins filter by channel, assign work manually or via “Auto assign (AI)”, and analytics panels highlight sentiment and urgency. Everything is optimized for storytelling during a pitch or demo.
@@ -22,6 +28,14 @@ QueryFlow AI is an interactive, demo-friendly contact center that showcases how 
 - **Backend / Infra:** Supabase (Postgres, RPC, Realtime), Vercel Edge Functions, OpenAI Responses API.
 - **Tooling:** ESLint/TypeScript strict configs, npm scripts (`dev`, `build`, `preview`).
 
+## Approach & Key Decisions
+
+- **Session-first experience:** A 30-second auto-expiring demo session prevents runaway API costs and provides a crisp story: press Start, watch OpenAI simulate traffic, press Stop.
+- **Supabase for state + realtime:** Postgres schemas, RPCs, and Realtime channels gave me a single backend surface—and the `delete_all_queries()` RPC keeps “Clear inbox” safe.
+- **OpenAI Responses API:** Generates multi-object JSON batches; I had to harden the parser to strip markdown fences, repair malformed keys, and ensure classic JSON parsing never breaks the UI.
+- **Separation of concerns:** User tab focuses on composing; Routing tab on analytics; Admin tab on acting. Each view shows the same underlying data but tailored to the persona.
+- **Mobile/responsive polish:** Admin detail panel reorders on small screens, CTA buttons remain visible, and assignment pulses are subtle enough not to distract.
+
 ## Getting Started
 
 ```bash
@@ -29,7 +43,7 @@ pnpm install    # npm/yarn works too
 pnpm dev        # runs Vite on http://localhost:5173
 ```
 
-### Required environment variables
+### Required Environment Variables
 
 | Name | Location | Purpose |
 | --- | --- | --- |
@@ -40,7 +54,7 @@ pnpm dev        # runs Vite on http://localhost:5173
 
 Add them locally via `.env` / `.env.local` and on Vercel under Project Settings → Environment Variables.
 
-### Supabase setup
+### Supabase Setup
 
 1. Create the `queries` table (id UUID default, user/channel/message fields, status, assigned_to, etc.).
 2. Run the SQL helper in `api/_shared/delete.sql` to create the `delete_all_queries()` RPC used by the “Clear inbox” action.
