@@ -130,43 +130,7 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
         <CardDescription>{formatDistanceToNow(new Date(query.createdAt), { addSuffix: true })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <section>
-          <h3 className="text-sm font-semibold text-muted-foreground">Message</h3>
-          <p className="mt-2 rounded-lg bg-muted/40 p-3 text-sm">{query.message}</p>
-        </section>
-
-        <section className="space-y-2 text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <DetailRow label="Department" value={query.department} />
-            <DetailRow label="Priority" value={priorityFromUrgency(query.urgency)} />
-            <DetailRow label="Sentiment" value={query.sentiment} />
-            <DetailRow
-              label="Assigned"
-              value={query.assignedTo ?? 'Unassigned'}
-              animateKey={query.assignedTo ?? 'Unassigned'}
-            />
-          </div>
-          {query.tags?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {query.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        {query.autoResponse && (
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground">AI Suggested Response</h3>
-            <p className="mt-2 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
-              {query.autoResponse}
-            </p>
-          </section>
-        )}
-
-        <section className="space-y-3">
+        <section className="space-y-3 rounded-xl bg-muted/40 p-3">
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
@@ -215,6 +179,45 @@ function QueryDetailPanel({ query, onAssign, onChangeStatus }: QueryDetailPanelP
               </select>
             </label>
           </div>
+        </section>
+
+        <section>
+          <h3 className="text-sm font-semibold text-muted-foreground">Message</h3>
+          <p className="mt-2 rounded-lg bg-muted/40 p-3 text-sm">{query.message}</p>
+        </section>
+
+        <section className="space-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <DetailRow label="Department" value={query.department} />
+            <DetailRow label="Priority" value={priorityFromUrgency(query.urgency)} />
+            <DetailRow label="Sentiment" value={query.sentiment} />
+            <DetailRow
+              label="Assigned"
+              value={query.assignedTo ?? 'Unassigned'}
+              animateKey={query.assignedTo ?? 'Unassigned'}
+            />
+          </div>
+          {query.tags?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {query.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        {query.autoResponse && (
+          <section>
+            <h3 className="text-sm font-semibold text-muted-foreground">AI Suggested Response</h3>
+            <p className="mt-2 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+              {query.autoResponse}
+            </p>
+          </section>
+        )}
+
+        <section className="space-y-3">
           <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -245,7 +248,7 @@ function DetailRow({ label, value, animateKey }: DetailRowProps) {
           key={animateKey}
           initial={{ backgroundColor: 'rgba(59,130,246,0.25)' }}
           animate={{ backgroundColor: 'transparent' }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.9 }}
           className="inline-flex rounded-md px-2 py-0.5 font-medium text-foreground"
         >
           {value ?? '—'}
@@ -350,7 +353,7 @@ export default function AdminInboxPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="flex flex-col-reverse gap-6 lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
         <div className="space-y-3 rounded-xl border p-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Total queries</span>
